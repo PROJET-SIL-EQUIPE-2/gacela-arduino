@@ -33,86 +33,100 @@ void stopCallback(Parser::Argument *args, char *response);
 
 bool stopit = false;
 
+const int pinCS = 53;
+bool _read = false;
+
+
 void setup()
 {
   // put your setup code here, to run once:
-  //  Serial.begin(9600);
-  ////  Serial.setTimeout(5000);
-  //  while (!Serial){}
-  //
-  //  parser.registerCommand("f", "ii", &forwardCallback);
-  //  parser.registerCommand("b", "ii", &backwardCallback);
-  //  parser.registerCommand("l", "ii", &leftCallback);
-  //  parser.registerCommand("r", "ii", &rightCallback);
-  //  parser.registerCommand("s", "", &stopCallback);
+    Serial.begin(9600);
+  //  Serial.setTimeout(5000);
+    while (!Serial){}
 
-  //  Serial.println("Ready to read commands");
-  //
-  //  commandsFile = SD.open("commands.txt", FILE_WRITE);
-  //  if(commandsFile){
-  //    Serial.println("Writing commands ...");
-  //
-  //      commandsFile.println("FORWARD 10 10");
-  //      commandsFile.println("BACKWARD 10 10");
-  //  }else{
-  //      Serial.println("error opening commands file");
-  //  }
-  //    commandsFile.close();
-  //
-  //
-  //  commandsFile = SD.open("commands.txt");
-  //  if(commandsFile){
-  //    Serial.println("Reading Commands ...");
-  //    String line;
-  //    while(commandsFile.available()){
-  //        // Read char
-  //        char c ;
-  //        // Construct current line string
-  //        int i = 0;
-  //        while((c = commandsFile.read()) != '\n'){
-  //            line = line + String(c);
-  //        }
-  //        Serial.println(line);
-  //
-  //      line = "";
-  //    }
-  //    Serial.println("Done Reading");
-  //
-  //  }else{
-  //    Serial.println("Could't open the file");
-  //  }
-  //  commandsFile.close();
+
+    initSD();
+  
+    parser.registerCommand("FORWARD", "ii", &forwardCallback);
+    parser.registerCommand("BACKWARD", "ii", &backwardCallback);
+    parser.registerCommand("LEFT", "ii", &leftCallback);
+    parser.registerCommand("RIGHT", "ii", &rightCallback);
+    parser.registerCommand("STOP", "", &stopCallback);
+
+  
+    commandsFile = SD.open("commands.txt");
+    if(commandsFile){
+      String line;
+      while(commandsFile.available()){
+          // Read char
+          char c ;
+          // Construct current line string
+
+              while((c = commandsFile.read()) != ';'){
+                if (c != '\n' && c != '\r'){
+                  line = line + String(c);
+                }
+                
+              }
+          
+          char command[128];
+          line.toCharArray(command, 128);
+          Serial.print(command);
+          char response[Parser::MAX_RESPONSE_SIZE];
+          parser.processCommand(command, response);
+          
+          
+         Serial.flush();
+  
+        line = "";
+      }
+      commandsFile.close();
+  
+    }else{
+      Serial.println("Could't open the file");
+    }
+    
 }
 
 void loop()
 {
   //  // put your main code here, to run repeatedly:
-  //  if(!stopit){
-  //    if (Serial.available()) {
-  //      char command[128];
-  //      for(int i = 0; i < 128; i++){
-  //        command[i] = '\0';
-  //      }
-  //      size_t commandLength = Serial.readBytesUntil(';', command, 128);
-  //      command[commandLength] = '\0';
-  //      String line = command;
-  //      char response[Parser::MAX_RESPONSE_SIZE];
-  ////      Serial.print(line);
-  //      line.toCharArray(command, 128);
-  ////      Serial.print(command);
-  //      parser.processCommand(command, response);
-  ////      Serial.print(response);
-  //      Serial.flush();
-  //    }
-  //
-  //  }
+    if(!_read){
+            commandsFile = SD.open("commands.txt");
+            if(commandsFile){
+            String line;
+            while(commandsFile.available()){
+            // Read char
+            char c ;
+            // Construct current line string
 
-  // if (!stopit){
-  //   moveForward(255, 2000);
-  //  rightRotate(255, 3000);
-  //  moveForward(255, 2000);
-  //  _stop();
-  // }
+             while((c = commandsFile.read()) != ';'){
+                if (c != '\n' && c != '\r'){
+                  line = line + String(c);
+                }
+                
+              }
+          
+            char command[128];
+            line.toCharArray(command, 128);
+            Serial.print(command);
+            char response[Parser::MAX_RESPONSE_SIZE];
+            parser.processCommand(command, response);
+          
+          
+            Serial.flush();
+  
+            line = "";
+        }
+        commandsFile.close();
+        _read = true;
+  
+      }else{
+        Serial.println("Could't open the file");
+      }
+    }
+
+
 }
 
 /* Parser callbacks */
@@ -179,6 +193,7 @@ void moveForward(int _speed = DEFAULT_MOTOR_SPEED, int _delay = DEFAULT_MOTOR_DE
   motor3.run(FORWARD);
   motor4.run(FORWARD);
   delay(_delay);
+  _stop();
 }
 
 void moveBackward(int _speed = DEFAULT_MOTOR_SPEED, int _delay = DEFAULT_MOTOR_DELAY)
@@ -193,6 +208,7 @@ void moveBackward(int _speed = DEFAULT_MOTOR_SPEED, int _delay = DEFAULT_MOTOR_D
   motor3.run(BACKWARD);
   motor4.run(BACKWARD);
   delay(_delay);
+  _stop();
 }
 
 void leftRotate(int _speed = DEFAULT_MOTOR_SPEED, int _delay = DEFAULT_MOTOR_DELAY)
@@ -209,6 +225,7 @@ void leftRotate(int _speed = DEFAULT_MOTOR_SPEED, int _delay = DEFAULT_MOTOR_DEL
   motor1.run(BACKWARD);
   motor4.run(BACKWARD);
   delay(_delay);
+  _stop();
 }
 
 void rightRotate(int _speed = DEFAULT_MOTOR_SPEED, int _delay = DEFAULT_MOTOR_DELAY)
@@ -226,6 +243,7 @@ void rightRotate(int _speed = DEFAULT_MOTOR_SPEED, int _delay = DEFAULT_MOTOR_DE
   motor3.run(BACKWARD);
 
   delay(_delay);
+  _stop();
 }
 
 void _stop()
@@ -235,4 +253,15 @@ void _stop()
   motor3.run(RELEASE);
   motor4.run(RELEASE);
   stopit = true;
+}
+
+
+void initSD(){
+//   Serial.println("Initializing SD card...");
+
+  if (!SD.begin(pinCS)) {
+//    Serial.println("initialization failed!");
+    while (1);
+  }
+//  Serial.println("initialization done.");
 }
