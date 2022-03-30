@@ -18,12 +18,12 @@ File commandsFile;
 
 const int DEFAULT_MOTOR_DELAY = 1000;
 const int DEFAULT_MOTOR_SPEED = 200;
-
-void moveForward(int _speed = DEFAULT_MOTOR_SPEED, int _delay = DEFAULT_MOTOR_DELAY);
-void moveBackward(int _speed = DEFAULT_MOTOR_SPEED, int _delay = DEFAULT_MOTOR_DELAY);
-void leftRotate(int _speed = DEFAULT_MOTOR_SPEED, int _delay = DEFAULT_MOTOR_DELAY);
-void rightRotate(int _speed = DEFAULT_MOTOR_SPEED, int _delay = DEFAULT_MOTOR_DELAY);
-void _stop();
+//
+//void moveForward(int _speed = DEFAULT_MOTOR_SPEED, int _delay = DEFAULT_MOTOR_DELAY);
+//void moveBackward(int _speed = DEFAULT_MOTOR_SPEED, int _delay = DEFAULT_MOTOR_DELAY);
+//void leftRotate(int _speed = DEFAULT_MOTOR_SPEED, int _delay = DEFAULT_MOTOR_DELAY);
+//void rightRotate(int _speed = DEFAULT_MOTOR_SPEED, int _delay = DEFAULT_MOTOR_DELAY);
+//void _stop();
 
 void forwardCallback(Parser::Argument *args, char *response);
 void backwardCallback(Parser::Argument *args, char *response);
@@ -36,21 +36,26 @@ bool stopit = false;
 const int pinCS = 53;
 bool _read = false;
 
-
+SdFile root;
 void setup()
 {
   // put your setup code here, to run once:
     Serial.begin(9600);
   //  Serial.setTimeout(5000);
     while (!Serial){}
-
-
+//
+//
     initSD();
   
     parser.registerCommand("FORWARD", "ii", &forwardCallback);
     parser.registerCommand("BACKWARD", "ii", &backwardCallback);
+    
     parser.registerCommand("LEFT", "ii", &leftCallback);
     parser.registerCommand("RIGHT", "ii", &rightCallback);
+    
+    parser.registerCommand("SLEFT", "iii", &steadyLeftCallback);
+    parser.registerCommand("SRIGHT", "iii", &steadyRightCallback);
+    
     parser.registerCommand("STOP", "", &stopCallback);
 
   
@@ -80,6 +85,7 @@ void setup()
   
         line = "";
       }
+    if (root.isOpen()) root.close();
       commandsFile.close();
   
     }else{
@@ -91,93 +97,8 @@ void setup()
 void loop()
 {
   //  // put your main code here, to run repeatedly:
-    if(!_read){
-            commandsFile = SD.open("commands.txt");
-            if(commandsFile){
-            String line;
-            while(commandsFile.available()){
-            // Read char
-            char c ;
-            // Construct current line string
+   
 
-             while((c = commandsFile.read()) != ';'){
-                if (c != '\n' && c != '\r'){
-                  line = line + String(c);
-                }
-                
-              }
-          
-            char command[128];
-            line.toCharArray(command, 128);
-            Serial.print(command);
-            char response[Parser::MAX_RESPONSE_SIZE];
-            parser.processCommand(command, response);
-          
-          
-            Serial.flush();
-  
-            line = "";
-        }
-        commandsFile.close();
-        _read = true;
-  
-      }else{
-        Serial.println("Could't open the file");
-      }
-    }
-
-
-}
-
-/* Parser callbacks */
-
-void forwardCallback(Parser::Argument *args, char *response)
-{
-  // FORWARD
-  //    Serial.print("Go forward with speed "); Serial.print((int32_t)args[0].asInt64);
-  //    Serial.print(" and for "); Serial.print((int32_t)args[1].asInt64);
-  //    Serial.println(" seconds");
-
-  strlcpy(response, "success", Parser::MAX_RESPONSE_SIZE);
-
-  moveForward((int32_t)args[0].asInt64, (int32_t)args[1].asInt64);
-}
-
-void backwardCallback(Parser::Argument *args, char *response)
-{
-  //    // BACKWARD
-  //    Serial.print("Go backward with speed "); Serial.print((int32_t)args[0].asInt64);
-  //    Serial.print(" and for "); Serial.print((int32_t)args[1].asInt64);
-  //    Serial.println(" seconds");
-
-  strlcpy(response, "success", Parser::MAX_RESPONSE_SIZE);
-
-  moveBackward((int32_t)args[0].asInt64, (int32_t)args[1].asInt64);
-}
-
-void leftCallback(Parser::Argument *args, char *response)
-{
-  // TURN LEFT
-  //    Serial.print("Turning left with angle "); Serial.println((int32_t)args[0].asInt64);
-  strlcpy(response, "success", Parser::MAX_RESPONSE_SIZE);
-
-  leftRotate((int32_t)args[0].asInt64, (int32_t)args[1].asInt64);
-}
-void rightCallback(Parser::Argument *args, char *response)
-{
-  // TRUN RIGHT
-  //    Serial.print("Turning right with angle "); Serial.println((int32_t)args[0].asInt64);
-  strlcpy(response, "success", Parser::MAX_RESPONSE_SIZE);
-  rightRotate((int32_t)args[0].asInt64, (int32_t)args[1].asInt64);
-}
-
-void stopCallback(Parser::Argument *args, char *response)
-{
-  // STOP WHEELS
-  //    Serial.println("stop");
-  strlcpy(response, "success", Parser::MAX_RESPONSE_SIZE);
-
-  _stop();
 }
 
 /* Motor control functions */
@@ -246,6 +167,42 @@ void rightRotate(int _speed = DEFAULT_MOTOR_SPEED, int _delay = DEFAULT_MOTOR_DE
   _stop();
 }
 
+
+void steadyRightRotate(int rightSpeed, int leftSpeed, int _delay){
+  stopit = false;
+  motor1.setSpeed(leftSpeed);
+  motor2.setSpeed(rightSpeed);
+  motor3.setSpeed(rightSpeed);
+  motor4.setSpeed(leftSpeed);
+
+  motor1.run(FORWARD);
+  motor4.run(FORWARD);
+
+  motor2.run(FORWARD);
+  motor3.run(FORWARD);
+
+  delay(_delay);
+  _stop();
+}
+
+void steadyLeftRotate(int rightSpeed, int leftSpeed, int _delay){
+  stopit = false;
+  motor1.setSpeed(leftSpeed);
+  motor2.setSpeed(rightSpeed);
+  motor3.setSpeed(rightSpeed);
+  motor4.setSpeed(leftSpeed);
+
+  motor2.run(FORWARD);
+  motor3.run(FORWARD);
+
+  motor1.run(FORWARD);
+  motor4.run(FORWARD);
+  delay(_delay);
+  _stop();
+}
+
+
+
 void _stop()
 {
   motor1.run(RELEASE);
@@ -253,6 +210,72 @@ void _stop()
   motor3.run(RELEASE);
   motor4.run(RELEASE);
   stopit = true;
+}
+
+/* Parser callbacks */
+
+void forwardCallback(Parser::Argument *args, char *response)
+{
+  // FORWARD
+
+
+  strlcpy(response, "success", Parser::MAX_RESPONSE_SIZE);
+
+  moveForward((int32_t)args[0].asInt64, (int32_t)args[1].asInt64);
+}
+
+void backwardCallback(Parser::Argument *args, char *response)
+{
+
+  strlcpy(response, "success", Parser::MAX_RESPONSE_SIZE);
+
+  moveBackward((int32_t)args[0].asInt64, (int32_t)args[1].asInt64);
+}
+
+void leftCallback(Parser::Argument *args, char *response)
+{
+  // TURN LEFT
+
+  strlcpy(response, "success", Parser::MAX_RESPONSE_SIZE);
+
+  leftRotate((int32_t)args[0].asInt64, (int32_t)args[1].asInt64);
+}
+void rightCallback(Parser::Argument *args, char *response)
+{
+  // TRUN RIGHT
+  strlcpy(response, "success", Parser::MAX_RESPONSE_SIZE);
+  rightRotate((int32_t)args[0].asInt64, (int32_t)args[1].asInt64);
+}
+
+
+
+void steadyLeftCallback(Parser::Argument *args, char *response)
+{
+  // TURN LEFT
+  //    Serial.print("Turning left with angle "); Serial.println((int32_t)args[0].asInt64);
+  strlcpy(response, "success", Parser::MAX_RESPONSE_SIZE);
+
+  steadyLeftRotate((int32_t)args[0].asInt64, (int32_t)args[1].asInt64, (int32_t)args[2].asInt64);
+}
+
+
+void steadyRightCallback(Parser::Argument *args, char *response)
+{
+  // TRUN RIGHT
+  //    Serial.print("Turning right with angle "); Serial.println((int32_t)args[0].asInt64);
+  strlcpy(response, "success", Parser::MAX_RESPONSE_SIZE);
+  steadyRightRotate((int32_t)args[0].asInt64, (int32_t)args[1].asInt64, (int32_t)args[2].asInt64);
+}
+
+
+
+void stopCallback(Parser::Argument *args, char *response)
+{
+  // STOP WHEELS
+  //    Serial.println("stop");
+  strlcpy(response, "success", Parser::MAX_RESPONSE_SIZE);
+
+  _stop();
 }
 
 
