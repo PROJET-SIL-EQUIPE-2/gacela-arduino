@@ -41,16 +41,16 @@ void setup()
     {
     }
 
-    parser.registerCommand("FORWARD", "i", &forwardCallback);
-    parser.registerCommand("BACKWARD", "i", &backwardCallback);
+    parser.registerCommand("f", "i", &forwardCallback);
+    parser.registerCommand("b", "i", &backwardCallback);
 
-    parser.registerCommand("LEFT", "i", &leftCallback);
-    parser.registerCommand("RIGHT", "i", &rightCallback);
+    parser.registerCommand("l", "i", &leftCallback);
+    parser.registerCommand("r", "i", &rightCallback);
 
-    parser.registerCommand("SLEFT", "ii", &steadyLeftCallback);
-    parser.registerCommand("SRIGHT", "ii", &steadyRightCallback);
+    parser.registerCommand("sl", "ii", &steadyLeftCallback);
+    parser.registerCommand("sr", "ii", &steadyRightCallback);
 
-    parser.registerCommand("STOP", "", &stopCallback);
+    parser.registerCommand("st", "", &stopCallback);
 }
 
 void loop()
@@ -194,7 +194,7 @@ void leftCallback(Parser::Argument *args, char *response)
 
     strlcpy(response, "success", Parser::MAX_RESPONSE_SIZE);
 
-    leftRotate((int32_t)args[0].asInt64, (int32_t)args[1].asInt64);
+    leftRotate((int32_t)args[0].asInt64);
 }
 void rightCallback(Parser::Argument *args, char *response)
 {
