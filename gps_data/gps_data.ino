@@ -1,7 +1,7 @@
 #include "TinyGPS++.h"
 #include "SoftwareSerial.h"
 
-SoftwareSerial serial_connection(10, 11); //RX=pin 10, TX=pin 11
+SoftwareSerial serial_connection(50,51); //RX=pin 51, TX=pin 50  (50?51) (TX,RX)
 TinyGPSPlus gps;//This is the GPS object that will pretty much do all the grunt work with the NMEA data
 void setup()
 {
@@ -30,10 +30,7 @@ void loop()
     Serial.println("Altitude Feet:");
     Serial.println(gps.altitude.feet());
     Serial.println("");
-  }else {
-        Serial.println("NO update");
-
-    }
+  }
 }
 
 /*
