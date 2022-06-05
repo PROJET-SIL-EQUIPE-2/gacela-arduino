@@ -4,6 +4,8 @@
 #include <CommandParser.h>
 #include <SPI.h>
 #include <SD.h>
+#include <SoftwareSerial.h>
+SoftwareSerial hc06(17,18);
 
 typedef CommandParser<> Parser;
 
@@ -37,6 +39,10 @@ void setup()
 {
     // put your setup code here, to run once:
     Serial.begin(9600);
+
+   //Initialize Bluetooth Serial Port
+hc06.begin(9600);
+Serial.println("hc began") ;
     while (!Serial)
     {
     }
@@ -57,6 +63,9 @@ void loop()
 {
     // read commands from serial
     // Can be changed to read from network
+    if (hc06.available()){
+Serial.write(hc06.read());
+}
     if (Serial.available())
     {
         char line[128];
