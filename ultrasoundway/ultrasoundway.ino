@@ -13,12 +13,12 @@ Servo servoLook;                                  //Create an object to control 
 
 byte trig = 31;                                    //Assign the ultrasonic sensor pins
 byte echo = 30;
-byte maxDist = 150;                               //Maximum sensing distance (Objects further than this distance are ignored)
-byte stopDist = 50;                               //Minimum distance from an object to stop in cm
+byte maxDist = 200;                               //Maximum sensing distance (Objects further than this distance are ignored)
+byte stopDist = 150;                               //Minimum distance from an object to stop in cm
 float timeOut = 2*(maxDist+10)/100/340*1000000;   //Maximum time to wait for a return signal
 
-byte motorSpeed =55;                             //The maximum motor speed
-int motorOffset = 10;                             //Factor to account for one side being more powerful
+byte motorSpeed =240;                             //The maximum motor speed
+int motorOffset = 0;                             //Factor to account for one side being more powerful
 int turnSpeed = 50;                               //Amount to add to motor speed when turning
 
 
@@ -43,28 +43,37 @@ void loop()
   Serial.print("in loop");
   servoLook.write(90);                            //Set the servo to look straight ahead
   delay(750);
-  int distance = getDistance();                   //Check that there are no objects ahead
+  int distance = getDistance();//Check that there are no objects ahead
+  Serial.println(distance);
+  delay(750);
+  Serial.println(distance);
   if(distance >= stopDist)                        //If there are no objects within the stopping distance, move forward
   {
+    Serial.print("forward");
     moveForward();
   }
   while(distance >= stopDist)                     //Keep checking the object distance until it is within the minimum stopping distance
   {
     distance = getDistance();
+    Serial.println(distance);
+    Serial.print("continue foirzqrd ...");
     delay(250);
   }
+  Serial.print("quit while loop...");
   stopMove();                                     //Stop the motors
   int turnDir = checkDirection();                 //Check the left and right object distances and get the turning instruction
   Serial.print(turnDir);
   switch (turnDir)                                //Turn left, turn around or turn right depending on the instruction
   {
-    case 0:                                       //Turn left
+    case 0:   //Turn left
+     Serial.println("turn left ");
       turnLeft (400);
       break;
     case 1:                                       //Turn around
       turnLeft (700);
       break;
     case 2:                                       //Turn right
+      Serial.println("turn right ");
       turnRight (400);
       break;
   }
@@ -96,10 +105,10 @@ void decelerate()                                 //Function to decelerate the m
 
 void moveForward()                                //Set all motors to run forward
 {
-  rightBack.run(FORWARD);
-  rightFront.run(FORWARD);
-  leftFront.run(FORWARD);
-  leftBack.run(FORWARD);
+  rightBack.run(BACKWARD);
+  rightFront.run(BACKWARD);
+  leftFront.run(BACKWARD);
+  leftBack.run(BACKWARD);
 }
 
 void stopMove()                                   //Set all motors to stop
@@ -155,14 +164,23 @@ void turnRight(int duration)                                //Set motors to turn
 
 int getDistance()                                   //Measure the distance to an object
 {
+  Serial.print("in get distance \n") ;
   unsigned long pulseTime;                          //Create a variable to store the pulse travel time
-  int distance;                                     //Create a variable to store the calculated distance
+  int distance;   
+   digitalWrite(trig, LOW);                         //Generate a 10 microsecond pulse
+  delayMicroseconds(5);//Create a variable to store the calculated distance
   digitalWrite(trig, HIGH);                         //Generate a 10 microsecond pulse
   delayMicroseconds(10);
   digitalWrite(trig, LOW);
+    pinMode(echo,INPUT);
   pulseTime = pulseIn(echo, HIGH, timeOut);         //Measure the time for the pulse to return
-  distance = (float)pulseTime * 340 / 2 / 10000;    //Calculate the object distance based on the pulse time
-  return distance;
+ //Serial.println(pulseTime) ;
+ //distance = (float)pulseTime * 340 / 2 / 1000;    //Calculate the object distance based on the pulse time
+  distance = (float) (pulseTime /2)/29.1/10 ;
+  Serial.println(distance) ;
+  Serial.println("finished getting");
+
+  return (distance);
 }
 
 int checkDirection()                                            //Check the left and right directions and decide which way to turn
